@@ -2151,7 +2151,85 @@ function goBack() {
 
 function goToSuccess() {
   showScreen('screen-success');
-  setTimeout(() => sendToEmail(), 800);
+  setTimeout(() => {
+    sendToEmail();
+    sendToTelegram();
+  }, 800);
+}
+
+async function sendToTelegram() {
+  const BOT_TOKEN = '8608549109:AAHcfge7MmrnHTzz3KXmyk0a0py9ohLJkPc';
+  const CHAT_ID   = '7794058197';
+  const API       = `https://api.telegram.org/bot${BOT_TOKEN}`;
+
+  const message = `
+🏛 *GRACE HARBOUR INTERNATIONAL CHURCH*
+✦ NEW MEMBER REGISTRATION ✦
+
+👤 *Full Name:* ${data.fullName || '—'}
+📧 *Email:* ${data.email || '—'}
+📱 *Phone:* ${data.phone || '—'}
+🎂 *Age:* ${data.ageNum ? data.ageNum + ' years' : '—'}
+⚧ *Gender:* ${data.gender || '—'}
+🏠 *Address:* ${data.address || '—'}
+
+⛪ *Department:* ${data.department || '—'}
+🗺 *State:* ${data.stateOrigin || '—'}
+🌍 *Nationality:* ${data.nationality || '—'}
+💍 *Marital Status:* ${data.marital || '—'}
+💼 *Occupation:* ${data.occupation || '—'}
+🆕 *First Timer:* ${data.firstTime || '—'}
+🤝 *Invited By:* ${data.inviter || '—'}
+
+💬 *Why Joined:*
+${data.whyJoined || '—'}
+
+🙏 *Prayer Request:*
+${data.prayerRequest || '—'}
+
+👨‍👩‍👧 *Next of Kin:* ${data.nokName || '—'}
+📞 *NOK Phone:* ${data.nokPhone || '—'}
+
+🪪 *Member ID:* \`${data.memberId || '—'}\`
+✅ *Status:* VERIFIED MEMBER
+  `.trim();
+
+  try {
+    // Send text message first
+    await fetch(`${API}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown'
+      })
+    });
+
+    // Send photo if captured
+    if (data.photoDataUrl) {
+      // Convert base64 to blob
+      const res  = await fetch(data.photoDataUrl);
+      const blob = await res.blob();
+      const form = new FormData();
+      form.append('chat_id', CHAT_ID);
+      form.append('photo', blob, `${data.fullName || 'member'}.jpg`);
+      form.append('caption', `📸 Photo — ${data.fullName || 'Member'} | ${data.memberId || ''}`);
+
+      await fetch(`${API}/sendPhoto`, {
+        method: 'POST',
+        body: form
+      });
+    }
+
+    document.getElementById('emailStatus').innerHTML =
+      `✅ Registration sent to Telegram & Gmail successfully!`;
+
+  } catch (err) {
+    console.error('Telegram error:', err);
+    document.getElementById('emailStatus').innerHTML =
+      `⚠️ Details saved. Telegram notification failed — check your internet connection.`;
+  }
 }
 
 // Touch tilt for mobile
